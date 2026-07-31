@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VERA · OWM Command Center</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0b;
+  --bg2:#111113;
+  --bg3:#18181c;
+  --border:#1e1e24;
+  --border2:#2a2a32;
+  --text:#e8e8f0;
+  --text2:#888896;
+  --text3:#555564;
+  --gold:#C9A227;
+  --gold2:#a07d12;
+  --green:#22c55e;
+  --red:#ef4444;
+  --blue:#3b82f6;
+  --purple:#8b5cf6;
+  --radius:12px;
+  --shadow:0 8px 32px rgba(0,0,0,.6);
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── TOPBAR ── */
+.topbar{
+  display:flex;align-items:center;gap:12px;padding:10px 18px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  min-height:52px;flex-shrink:0;z-index:10;
+}
+.topbar-brand{display:flex;align-items:center;gap:10px;margin-right:8px}
+.topbar-brand .logo{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,#C9A227,#7b5a00);
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:800;color:#000;flex-shrink:0;
+}
+.topbar-brand .brand-text{display:flex;flex-direction:column;line-height:1.1}
+.topbar-brand .brand-name{font-size:13px;font-weight:700;color:var(--gold)}
+.topbar-brand .brand-sub{font-size:10px;color:var(--text3)}
+.topbar-divider{width:1px;height:24px;background:var(--border2);margin:0 4px}
+.nav-pills{display:flex;gap:4px;flex:1}
+.nav-pill{
+  padding:5px 12px;border-radius:8px;border:none;cursor:pointer;
+  font-size:12px;font-weight:600;color:var(--text2);background:transparent;
+  transition:all .2s;display:flex;align-items:center;gap:6px;
+}
+.nav-pill:hover{background:var(--bg3);color:var(--text)}
+.nav-pill.active{background:rgba(201,162,39,.12);color:var(--gold)}
+.nav-pill .badge{
+  background:var(--red);color:#fff;font-size:9px;font-weight:700;
+  border-radius:10px;padding:1px 5px;min-width:16px;text-align:center;
+}
+.topbar-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.voice-btn{
+  display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;
+  border:1px solid var(--border2);background:var(--bg3);cursor:pointer;
+  font-size:11px;font-weight:600;color:var(--text2);transition:all .2s;
+}
+.voice-btn:hover{border-color:var(--gold);color:var(--gold)}
+.voice-btn.speaking{border-color:var(--gold);color:var(--gold);background:rgba(201,162,39,.12);animation:voice-pulse .8s ease-in-out infinite}
+.voice-btn.listening-active{border-color:#22c55e;color:#22c55e;background:rgba(34,197,94,.12);animation:listen-pulse .8s ease-in-out infinite}
+@keyframes listen-pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+.voice-btn.muted{color:var(--text3)}
+@keyframes voice-pulse{0%,100%{box-shadow:0 0 0 0 rgba(201,162,39,.4)}50%{box-shadow:0 0 0 6px rgba(201,162,39,0)}}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.status-dot.red{background:var(--red)}
+.status-txt{font-size:11px;color:var(--text3)}
+.mode-toggle{
+  display:flex;background:var(--bg3);border-radius:8px;padding:2px;border:1px solid var(--border);
+}
+.mode-btn{
+  padding:4px 10px;border-radius:6px;border:none;cursor:pointer;
+  font-size:11px;font-weight:600;color:var(--text2);background:transparent;transition:all .2s;
+}
+.mode-btn.active{background:var(--gold);color:#000}
+
+/* ── SPLIT ── */
+.split{display:flex;flex:1;overflow:hidden;position:relative}
+
+/* ── VERA PANE ── */
+.vera-pane{
+  display:flex;flex-direction:column;
+  flex:1 1 100%;min-width:0;
+  transition:flex .35s cubic-bezier(.4,0,.2,1);
+  background:var(--bg);
+}
+.drawer-open .vera-pane{flex:0 0 44%}
+
+/* ── INFO DRAWER ── */
+.info-drawer{
+  flex:0 0 0;width:0;overflow:hidden;
+  transition:flex .35s cubic-bezier(.4,0,.2,1),width .35s cubic-bezier(.4,0,.2,1);
+  background:var(--bg2);
+  display:flex;flex-direction:column;
+}
+.drawer-open .info-drawer{
+  flex:0 0 56%;width:56%;border-left:1px solid var(--border);
+}
+.drawer-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.drawer-head h3{font-size:14px;font-weight:700;color:var(--text)}
+.drawer-close{
+  background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  width:28px;height:28px;cursor:pointer;color:var(--text2);font-size:16px;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.drawer-close:hover{background:var(--border2);color:var(--text)}
+.drawer-body{flex:1;overflow-y:auto;padding:16px}
+.drawer-body::-webkit-scrollbar{width:4px}
+.drawer-body::-webkit-scrollbar-track{background:transparent}
+.drawer-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* ── VERA CHAT ── */
+.vera-chat{display:flex;flex-direction:column;height:100%}
+.vera-messages{
+  flex:1;overflow-y:auto;padding:20px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.vera-messages::-webkit-scrollbar{width:4px}
+.vera-messages::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* Welcome screen */
+.vera-welcome{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:20px;padding:32px;text-align:center;
+}
+.vera-orb{
+  width:80px;height:80px;border-radius:50%;
+  background:linear-gradient(135deg,#C9A227 0%,#7b5a00 50%,#C9A227 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;font-weight:900;color:#000;
+  box-shadow:0 0 40px rgba(201,162,39,.3),0 0 80px rgba(201,162,39,.1);
+  animation:orbpulse 3s ease-in-out infinite;
+}
+@keyframes orbpulse{
+  0%,100%{box-shadow:0 0 40px rgba(201,162,39,.3),0 0 80px rgba(201,162,39,.1)}
+  50%{box-shadow:0 0 60px rgba(201,162,39,.5),0 0 120px rgba(201,162,39,.2)}
+}
+.vera-welcome h1{font-size:22px;font-weight:800;color:var(--text)}
+.vera-welcome p{font-size:13px;color:var(--text2);max-width:400px;line-height:1.6}
+.vera-briefing{
+  background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.15);
+  border-radius:var(--radius);padding:14px 18px;max-width:500px;text-align:left;
+  font-size:13px;color:var(--text2);line-height:1.6;
+}
+.vera-briefing strong{color:var(--gold);display:block;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+
+/* Quick pills */
+.quick-pills{
+  padding:12px 20px;display:flex;flex-wrap:wrap;gap:8px;
+  border-top:1px solid var(--border);flex-shrink:0;
+}
+.quick-pill{
+  padding:6px 14px;border-radius:20px;border:1px solid var(--border2);
+  background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.quick-pill:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,162,39,.06)}
+
+/* Chat input */
+.vera-input-area{
+  padding:14px 18px;border-top:1px solid var(--border);flex-shrink:0;
+  display:flex;gap:10px;align-items:flex-end;
+}
+.vera-input{
+  flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;
+  padding:12px 16px;color:var(--text);font-size:14px;resize:none;
+  font-family:inherit;min-height:48px;max-height:120px;line-height:1.5;
+  transition:border-color .2s;
+}
+.vera-input:focus{outline:none;border-color:var(--gold)}
+.vera-input::placeholder{color:var(--text3)}
+.send-btn{
+  width:48px;height:48px;border-radius:12px;border:none;cursor:pointer;
+  background:var(--gold);color:#000;font-size:20px;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;
+}
+.send-btn:hover{background:var(--gold2)}
+.send-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Messages */
+.msg-u{
+  align-self:flex-end;background:var(--gold);color:#000;
+  border-radius:16px 16px 4px 16px;padding:10px 16px;
+  max-width:75%;font-size:14px;line-height:1.5;
+}
+.msg-v{
+  align-self:flex-start;background:var(--bg3);border:1px solid var(--border);
+  border-radius:4px 16px 16px 16px;padding:12px 16px;
+  max-width:85%;font-size:14px;line-height:1.6;color:var(--text);
+}
+.msg-v strong{color:var(--gold)}
+.msg-v ul{margin-left:16px;margin-top:6px}
+.msg-v li{margin-bottom:4px}
+.msg-s{
+  align-self:center;background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.12);
+  border-radius:10px;padding:6px 14px;font-size:11px;color:var(--gold);
+  font-weight:500;
+}
+.thinking-dots{display:flex;gap:4px;padding:4px 0}
+.thinking-dots span{
+  width:6px;height:6px;border-radius:50%;background:var(--text3);
+  animation:tdot .9s ease-in-out infinite;
+}
+.thinking-dots span:nth-child(2){animation-delay:.15s}
+.thinking-dots span:nth-child(3){animation-delay:.3s}
+@keyframes tdot{0%,80%,100%{transform:scale(1)}40%{transform:scale(1.4);background:var(--gold)}}
+
+/* ── STATS GRID ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;display:flex;flex-direction:column;gap:4px;
+}
+.stat-card .sc-icon{font-size:18px;margin-bottom:2px}
+.stat-card .sc-val{font-size:22px;font-weight:800;color:var(--text)}
+.stat-card .sc-lbl{font-size:11px;color:var(--text3);font-weight:500}
+.stat-card.gold .sc-val{color:var(--gold)}
+.stat-card.red .sc-val{color:var(--red)}
+.stat-card.green .sc-val{color:var(--green)}
+
+/* ── MINI TABLE ── */
+.mini-table{width:100%;border-collapse:collapse;margin-top:8px}
+.mini-table th{font-size:10px;color:var(--text3);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+.mini-table td{font-size:12px;color:var(--text2);padding:8px 8px;border-bottom:1px solid var(--border)}
+.mini-table tr:last-child td{border-bottom:none}
+.mini-table tr:hover td{background:var(--bg3)}
+
+/* ── PROPOSALS ── */
+.proposal-card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:14px;margin-bottom:10px;
+}
+.prop-tag{
+  display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;
+  font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:8px;
+}
+.prop-tag.upsell{background:rgba(34,197,94,.1);color:var(--green)}
+.prop-tag.risk{background:rgba(239,68,68,.1);color:var(--red)}
+.prop-tag.outreach{background:rgba(59,130,246,.1);color:var(--blue)}
+.prop-tag.content{background:rgba(139,92,246,.1);color:var(--purple)}
+.proposal-card h4{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.proposal-card p{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px}
+.prop-meta{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.prop-meta span{font-size:11px;color:var(--text3)}
+.prop-meta strong{color:var(--text)}
+.prop-actions{display:flex;gap:8px}
+.btn-approve{
+  flex:1;padding:8px;border-radius:8px;border:none;cursor:pointer;
+  background:rgba(34,197,94,.12);color:var(--green);font-size:12px;font-weight:600;
+  transition:all .2s;
+}
+.btn-approve:hover{background:rgba(34,197,94,.22)}
+.btn-decline{
+  flex:1;padding:8px;border-radius:8px;border:none;cursor:pointer;
+  background:rgba(239,68,68,.08);color:var(--red);font-size:12px;font-weight:600;
+  transition:all .2s;
+}
+.btn-decline:hover{background:rgba(239,68,68,.18)}
+.btn-vera{
+  flex:1;padding:8px;border-radius:8px;border:none;cursor:pointer;
+  background:rgba(201,162,39,.08);color:var(--gold);font-size:12px;font-weight:600;
+  transition:all .2s;
+}
+.btn-vera:hover{background:rgba(201,162,39,.18)}
+
+/* ── GUARDIAN ── */
+.guardian-card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;margin-bottom:8px;display:flex;gap:12px;
+}
+.guardian-sev{width:4px;flex-shrink:0;border-radius:4px;align-self:stretch}
+.guardian-sev.critical{background:var(--red)}
+.guardian-sev.high{background:#f97316}
+.guardian-body h4{font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px}
+.guardian-body p{font-size:11px;color:var(--text2);line-height:1.5}
+.guardian-badge{
+  display:inline-flex;padding:2px 6px;border-radius:4px;
+  font-size:9px;font-weight:700;text-transform:uppercase;margin-bottom:4px;
+}
+.guardian-badge.critical{background:rgba(239,68,68,.12);color:var(--red)}
+.guardian-badge.high{background:rgba(249,115,22,.12);color:#f97316}
+
+/* ── SOCIAL POST MOCKUPS ── */
+
+/* Instagram */
+.ig-card{
+  background:#fff;border-radius:12px;overflow:hidden;margin-bottom:24px;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:420px;margin-left:auto;margin-right:auto;
+}
+.ig-header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff}
+.ig-avatar{
+  width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.ig-handle .ih-name{font-size:13px;font-weight:700;color:#262626;display:block}
+.ig-handle .ih-sub{font-size:11px;color:#8e8e8e}
+.ig-image{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.ig-image-overlay{position:absolute;inset:0}
+.ig-image-txt{
+  position:relative;z-index:1;text-align:center;padding:20px;
+  color:#fff;font-size:13px;font-weight:600;line-height:1.5;
+  text-shadow:0 2px 10px rgba(0,0,0,.7);
+}
+.ig-actions{display:flex;gap:14px;padding:10px 14px 4px;background:#fff;font-size:20px}
+.ig-actions .ig-bookmark{margin-left:auto}
+.ig-caption-area{padding:2px 14px 8px;background:#fff}
+.ig-caption{font-size:13px;color:#262626;line-height:1.5}
+.ig-caption strong{font-weight:700}
+.ig-hashtags{font-size:12px;color:#00376b;margin-top:4px}
+.ig-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 14px 12px;border-top:1px solid #efefef;background:#fff;
+}
+
+/* TikTok */
+.tt-card{
+  background:#000;border-radius:12px;overflow:hidden;margin-bottom:24px;
+  box-shadow:0 4px 24px rgba(0,0,0,.7);max-width:280px;margin-left:auto;margin-right:auto;
+}
+.tt-header{display:flex;align-items:center;gap:8px;padding:10px 12px}
+.tt-avatar{
+  width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.tt-username{color:#fff;font-size:12px;font-weight:700}
+.tt-username span{color:#888;font-weight:400;margin-left:4px;font-size:11px}
+.tt-video{width:100%;aspect-ratio:9/16;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.tt-video-bg{position:absolute;inset:0}
+.tt-play-btn{
+  position:relative;z-index:2;width:56px;height:56px;border-radius:50%;
+  background:rgba(255,255,255,.2);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;font-size:24px;
+}
+.tt-side-actions{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  z-index:3;display:flex;flex-direction:column;gap:16px;align-items:center;
+}
+.tt-side-actions span{font-size:24px;cursor:pointer;filter:drop-shadow(0 1px 4px rgba(0,0,0,.5))}
+.tt-brief-overlay{
+  position:absolute;bottom:0;left:0;right:0;z-index:2;
+  padding:14px 12px 12px;
+  background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,transparent 100%);
+}
+.tt-brief-overlay p{color:#fff;font-size:11px;line-height:1.5;font-weight:500}
+.tt-bottom{padding:10px 12px 8px;background:#000}
+.tt-caption{color:#d0d0d0;font-size:12px;line-height:1.5;margin-bottom:4px}
+.tt-hashtags{color:#fe2c55;font-size:11px;font-weight:600;margin-bottom:8px}
+.tt-footer{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid #1a1a1a}
+
+/* Facebook */
+.fb-card{
+  background:#1c1e21;border-radius:12px;overflow:hidden;margin-bottom:24px;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:420px;margin-left:auto;margin-right:auto;
+  border:1px solid #3a3b3c;
+}
+.fb-header{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.fb-avatar{
+  width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.fb-name{color:#e4e6eb;font-size:13px;font-weight:700;display:block}
+.fb-meta{color:#b0b3b8;font-size:11px}
+.fb-text{padding:4px 14px 10px;color:#e4e6eb;font-size:13px;line-height:1.6}
+.fb-image{width:100%;aspect-ratio:16/9;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.fb-image-bg{position:absolute;inset:0}
+.fb-image-txt{
+  position:relative;z-index:1;color:#fff;font-size:13px;font-weight:600;
+  text-align:center;padding:20px;text-shadow:0 2px 10px rgba(0,0,0,.7);
+}
+.fb-react-bar{
+  display:flex;gap:0;border-top:1px solid #3a3b3c;border-bottom:1px solid #3a3b3c;
+}
+.fb-react-btn{
+  flex:1;padding:8px 4px;display:flex;align-items:center;justify-content:center;
+  gap:6px;color:#b0b3b8;font-size:12px;font-weight:600;cursor:pointer;
+}
+.fb-react-btn:hover{background:rgba(255,255,255,.05)}
+.fb-footer{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 12px}
+
+/* LinkedIn */
+.li-card{
+  background:#1b1f23;border-radius:12px;overflow:hidden;margin-bottom:24px;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:420px;margin-left:auto;margin-right:auto;
+  border:1px solid #2a3038;
+}
+.li-header{display:flex;align-items:flex-start;gap:10px;padding:14px 14px 10px}
+.li-avatar{
+  width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.li-name{color:#e9e5df;font-size:14px;font-weight:700;display:block}
+.li-title{color:#a8b1bc;font-size:12px;display:block}
+.li-date-txt{color:#717a83;font-size:11px}
+.li-follow-btn{
+  margin-left:auto;padding:4px 12px;border-radius:14px;border:1px solid #0a66c2;
+  color:#70b5f9;font-size:12px;font-weight:600;cursor:pointer;background:transparent;
+  white-space:nowrap;
+}
+.li-body{padding:4px 14px 10px;color:#e9e5df;font-size:13px;line-height:1.6}
+.li-image{width:100%;aspect-ratio:1.91/1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.li-image-bg{position:absolute;inset:0}
+.li-image-txt{
+  position:relative;z-index:1;color:#fff;font-size:13px;font-weight:600;
+  text-align:center;padding:20px;text-shadow:0 2px 10px rgba(0,0,0,.7);
+}
+.li-react-bar{
+  display:flex;gap:0;padding:4px 0;border-top:1px solid #2a3038;
+}
+.li-react-btn{
+  flex:1;padding:8px 4px;display:flex;align-items:center;justify-content:center;
+  gap:6px;color:#a8b1bc;font-size:12px;font-weight:600;cursor:pointer;
+}
+.li-react-btn:hover{background:rgba(255,255,255,.04)}
+.li-footer{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 12px;border-top:1px solid #2a3038}
+
+/* Shared post status + action buttons */
+.post-status-pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px}
+.psp-approved{background:#d4edda;color:#155724}
+.psp-draft{background:#fff3cd;color:#856404}
+.psp-rejected{background:#f8d7da;color:#721c24}
+.psp-dark-approved{background:rgba(34,197,94,.15);color:var(--green)}
+.psp-dark-draft{background:rgba(201,162,39,.12);color:var(--gold)}
+.psp-dark-rejected{background:rgba(239,68,68,.1);color:var(--red)}
+.post-action-btns{display:flex;gap:6px}
+.pa-btn{
+  padding:4px 10px;border-radius:6px;border:none;cursor:pointer;
+  font-size:11px;font-weight:600;transition:all .2s;
+}
+.pa-approve{background:rgba(34,197,94,.12);color:var(--green)}
+.pa-approve:hover{background:rgba(34,197,94,.25)}
+.pa-reject{background:rgba(239,68,68,.08);color:var(--red)}
+.pa-reject:hover{background:rgba(239,68,68,.2)}
+.pa-vera{background:rgba(201,162,39,.08);color:var(--gold)}
+.pa-vera:hover{background:rgba(201,162,39,.2)}
+
+/* ── PLATFORM FILTER ── */
+.plat-filter{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.plat-btn{
+  padding:5px 12px;border-radius:20px;border:1px solid var(--border2);
+  background:var(--bg3);color:var(--text2);font-size:11px;font-weight:600;
+  cursor:pointer;transition:all .2s;
+}
+.plat-btn.active{background:var(--gold);color:#000;border-color:var(--gold)}
+
+/* ── SECTION HEADER ── */
+.section-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;
+}
+.section-hdr h3{font-size:13px;font-weight:700;color:var(--text)}
+.section-hdr span{font-size:11px;color:var(--text3)}
+
+/* ── ALERTS ── */
+.alert{
+  border-radius:8px;padding:10px 14px;margin-bottom:10px;
+  font-size:12px;line-height:1.5;display:flex;gap:8px;align-items:flex-start;
+}
+.alert-warn{background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);color:#f97316}
+.alert-ok{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);color:var(--green)}
+.alert-info{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);color:var(--blue)}
+
+/* ── PASSWORD GATE ── */
+#authGate{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;z-index:9999;
+}
+.auth-box{
+  background:var(--bg2);border:1px solid var(--border);border-radius:20px;
+  padding:40px;text-align:center;max-width:380px;width:100%;
+  box-shadow:var(--shadow);
+}
+.auth-box .logo-big{
+  width:64px;height:64px;border-radius:16px;
+  background:linear-gradient(135deg,#C9A227,#7b5a00);
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;font-weight:900;color:#000;margin:0 auto 20px;
+}
+.auth-box h2{font-size:22px;font-weight:800;margin-bottom:6px}
+.auth-box p{font-size:13px;color:var(--text2);margin-bottom:24px}
+.auth-input{
+  width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;
+  padding:13px 16px;color:var(--text);font-size:15px;font-family:inherit;
+  text-align:center;letter-spacing:.15em;margin-bottom:12px;
+  transition:border-color .2s;
+}
+.auth-input:focus{outline:none;border-color:var(--gold)}
+.auth-btn{
+  width:100%;background:var(--gold);color:#000;border:none;border-radius:10px;
+  padding:13px;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;
+}
+.auth-btn:hover{background:var(--gold2)}
+.auth-err{color:var(--red);font-size:12px;margin-top:8px;display:none}
+
+/* Loading bar */
+#loadingBar{
+  position:fixed;top:0;left:0;height:2px;background:var(--gold);
+  transition:width .3s ease;z-index:99999;width:0;
+}
+</style>
+</head>
+<body>
+
+<div id="loadingBar"></div>
+
+<!-- AUTH GATE -->
+<div id="authGate">
+  <div class="auth-box">
+    <div class="logo-big">V</div>
+    <h2>VERA Command Center</h2>
+    <p>OWM · Copimex · Nice Kerr operations</p>
+    <input class="auth-input" type="password" id="authInput" placeholder="Access code" />
+    <button class="auth-btn" onclick="checkAuth()">Enter</button>
+    <div class="auth-err" id="authErr">Incorrect access code</div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar" id="appTopbar" style="display:none">
+  <div class="topbar-brand">
+    <div class="logo">V</div>
+    <div class="brand-text">
+      <span class="brand-name">VERA</span>
+      <span class="brand-sub">OWM Command Center</span>
+    </div>
+  </div>
+  <div class="topbar-divider"></div>
+  <div class="nav-pills">
+    <button class="nav-pill" id="pill-overview" onclick="openDrawer('overview')">📊 Overview</button>
+    <button class="nav-pill" id="pill-social" onclick="openDrawer('social')">📱 Social <span class="badge" id="draftBadge" style="display:none">0</span></button>
+    <button class="nav-pill" id="pill-proposals" onclick="openDrawer('proposals')">💡 Proposals <span class="badge" id="propBadge" style="display:none">0</span></button>
+    <button class="nav-pill" id="pill-guardian" onclick="openDrawer('guardian')">🛡️ Guardian</button>
+  </div>
+  <div class="topbar-right">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="mode-ops" onclick="setMode('ops')">⚙️ OPS</button>
+      <button class="mode-btn" id="mode-mkt" onclick="setMode('marketing')">🎯 Marketing</button>
+    </div>
+    <div class="topbar-divider"></div>
+    <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Toggle VERA voice">🔊 Voice</button>
+    <div class="topbar-divider"></div>
+    <div class="status-dot" id="statusDot"></div>
+    <span class="status-txt" id="statusTxt">Loading…</span>
+  </div>
+</div>
+
+<!-- SPLIT LAYOUT -->
+<div class="split" id="split" style="display:none">
+
+  <!-- VERA PANE -->
+  <div class="vera-pane">
+    <div class="vera-chat">
+
+      <div class="vera-messages" id="veraMessages">
+        <div class="vera-welcome" id="veraWelcome">
+          <div class="vera-orb">V</div>
+          <h1 id="welcomeTitle">Good morning, Raul.</h1>
+          <p id="welcomeSubtitle">Loading your briefing…</p>
+          <div class="vera-briefing" id="veraBriefing" style="display:none">
+            <strong>📋 Today's Briefing</strong>
+            <span id="briefingText"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-pills">
+        <button class="quick-pill" onclick="quickAsk('What needs my attention today across OWM, Copimex and Nice Kerr?')">🎯 What needs attention?</button>
+        <button class="quick-pill" onclick="quickAsk('How is Nice Kerr doing in Gambia? What should be our next steps there?')">🌍 Nice Kerr status</button>
+        <button class="quick-pill" onclick="quickAsk('What is the status of our consolidation containers? Any delays or issues?')">📦 Container status</button>
+        <button class="quick-pill" onclick="openDrawer('proposals')">💡 Show proposals</button>
+        <button class="quick-pill" onclick="quickAsk('What new markets should Copimex enter based on our current strengths and infrastructure?')">🚀 New markets</button>
+        <button class="quick-pill" onclick="quickAsk('What repetitive operations could we automate this week to free time for sales?')">🤖 Automate ops</button>
+      </div>
+
+      <div class="vera-input-area">
+        <textarea class="vera-input" id="veraInput" placeholder="Type or just speak — VERA is listening…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this);if(isSpeaking){window.speechSynthesis.cancel();isSpeaking=false;setVoiceBtn(false,false)}"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMsg()">➤</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- INFO DRAWER (slides in from right) -->
+  <div class="info-drawer" id="infoDrawer">
+    <div class="drawer-head">
+      <h3 id="drawerTitle">Overview</h3>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────────
+var ACCESS_CODE = 'VERA2026'
+var VERA_API  = 'https://pfdkerxcaswzedivvgpx.supabase.co/functions/v1/vera-api'
+var VERA_CHAT = 'https://pfdkerxcaswzedivvgpx.supabase.co/functions/v1/vera-ai'
+var ANON_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmZGtlcnhjYXN3emVkaXZ2Z3B4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3OTY1OTMsImV4cCI6MjA5NzM3MjU5M30._kjKyF-a8CJEh_Cd6cQ9WP-83LzBF5YecaegraMD47o'
+
+var veraMode    = 'ops'
+var dashData    = null
+var activeFilter = 'all'
+var isLoading   = false
+var currentDrawer = null
+
+// ── VOICE ────────────────────────────────────────────────────────────────────────
+var voiceEnabled = false  // OFF until user clicks Voice button (Chrome needs a user gesture first)
+var voiceMode    = false  // true = full conversation mode (speak → listen loop)
+var isSpeaking   = false
+var recognition  = null
+var isListening  = false
+
+function toggleVoice() {
+  voiceMode = !voiceMode
+  voiceEnabled = voiceMode
+  if (!voiceMode) {
+    window.speechSynthesis.cancel()
+    stopListening()
+    setVoiceBtn(false)
+  } else {
+    // First user click — Chrome allows mic now. Start listening immediately.
+    setVoiceBtn(false)
+    startListening()
+  }
+}
+
+function setVoiceBtn(speaking) {
+  var btn = document.getElementById('voiceBtn')
+  if (!btn) return
+  btn.className = 'voice-btn' + (speaking ? ' speaking' : '') + (!voiceEnabled ? ' muted' : '')
+  if (!voiceMode)        { btn.className = 'voice-btn'; btn.textContent = '🔊 Start voice' }
+  else if (isListening)  { btn.className = 'voice-btn listening-active'; btn.textContent = '👂 Listening…' }
+  else if (speaking)     { btn.className = 'voice-btn speaking'; btn.textContent = '🎙️ Speaking…' }
+  else                   { btn.className = 'voice-btn'; btn.textContent = '🔊 Voice on' }
+}
+
+function speakVera(text, thenListen) {
+  if (!voiceEnabled || !window.speechSynthesis) {
+    if (thenListen) startListening()
+    return
+  }
+  window.speechSynthesis.cancel()
+
+  var clean = text.replace(/<[^>]+>/g,'').replace(/[^\x00-\x7FÀ-ɏ -ÿ]/g,'').replace(/\s+/g,' ').trim()
+  if (!clean) { if (thenListen) startListening(); return }
+
+  // Language detection
+  var esWords = (clean.match(/\b(que|con|para|por|una|los|las|del|son|esto|más|también|pero|como|sus|tenemos|nuestro|tiene|hay|puede|hacer)\b/gi)||[]).length
+  var lang = (esWords / Math.max(clean.split(/\s+/).length, 1) > 0.1) ? 'es-MX' : 'en-US'
+
+  function doSpeak(voices) {
+    var utt = new SpeechSynthesisUtterance(clean)
+    utt.lang   = lang
+    utt.rate   = 1.0
+    utt.pitch  = 1.05
+    utt.volume = 1
+
+    // Pick best female voice
+    var preferred = voices.find(function(v){
+      return v.lang.startsWith(lang === 'es-MX' ? 'es' : 'en') &&
+             /female|woman|zira|aria|natasha|karen|samantha|monica|paulina|helena/i.test(v.name)
+    }) || voices.find(function(v){ return v.lang === lang })
+       || voices.find(function(v){ return v.lang.startsWith(lang.split('-')[0]) })
+    if (preferred) utt.voice = preferred
+
+    // Chrome keepalive: pause/resume every 10s to prevent TTS from cutting out
+    var keepAlive = null
+    utt.onstart = function() {
+      isSpeaking = true
+      setVoiceBtn(true)
+      keepAlive = setInterval(function(){
+        if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+          window.speechSynthesis.pause()
+          window.speechSynthesis.resume()
+        }
+      }, 10000)
+    }
+    utt.onend = function() {
+      clearInterval(keepAlive)
+      isSpeaking = false
+      setVoiceBtn(false)
+      if (thenListen && voiceMode) setTimeout(startListening, 400)
+    }
+    utt.onerror = function() {
+      clearInterval(keepAlive)
+      isSpeaking = false
+      setVoiceBtn(false)
+      if (thenListen && voiceMode) setTimeout(startListening, 400)
+    }
+
+    window.speechSynthesis.speak(utt)
+  }
+
+  isSpeaking = true
+  setVoiceBtn(true)
+  var voices = window.speechSynthesis.getVoices()
+  if (voices.length === 0) {
+    window.speechSynthesis.onvoiceschanged = function() { doSpeak(window.speechSynthesis.getVoices()) }
+  } else {
+    doSpeak(voices)
+  }
+}
+
+// ── AUTO-LISTEN: starts automatically after VERA speaks ──────────────────────
+function startListening() {
+  if (!voiceMode || isListening || isLoading) return
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition
+  if (!SR) return
+
+  recognition = new SR()
+  recognition.continuous     = false
+  recognition.interimResults = true
+  recognition.lang           = 'es-MX'  // Chrome handles both ES and EN with es-MX set
+
+  var inp = document.getElementById('veraInput')
+
+  recognition.onstart = function() {
+    isListening = true
+    setVoiceBtn(false)
+    if (inp) inp.placeholder = '👂 Listening — speak now…'
+  }
+
+  recognition.onresult = function(e) {
+    var t = ''
+    for (var i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript
+    if (inp) { inp.value = t; autoResize(inp) }
+  }
+
+  recognition.onend = function() {
+    stopListening()
+    var txt = inp ? inp.value.trim() : ''
+    if (txt) setTimeout(sendMsg, 350)
+  }
+
+  recognition.onerror = function(e) {
+    stopListening()
+  }
+
+  try { recognition.start() } catch(e) { stopListening() }
+}
+
+function stopListening() {
+  isListening = false
+  if (recognition) { try { recognition.stop() } catch(e){} recognition = null }
+  setVoiceBtn(false)
+  var inp = document.getElementById('veraInput')
+  if (inp) inp.placeholder = 'Type or just speak — VERA is listening…'
+}
+
+// ── AUTH ────────────────────────────────────────────────────────────────────────
+function checkAuth() {
+  var val = document.getElementById('authInput').value.trim().toUpperCase()
+  if (val === ACCESS_CODE) {
+    try { localStorage.setItem('vera_auth','1') } catch(e){}
+    bootApp()
+  } else {
+    var err = document.getElementById('authErr')
+    err.style.display = 'block'
+    setTimeout(function(){ err.style.display='none' }, 3000)
+  }
+}
+document.getElementById('authInput').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') checkAuth()
+})
+
+;(function(){
+  try {
+    if (localStorage.getItem('vera_auth') === '1') bootApp()
+  } catch(e){}
+})()
+
+function bootApp() {
+  document.getElementById('authGate').style.display = 'none'
+  document.getElementById('appTopbar').style.display = 'flex'
+  document.getElementById('split').style.display = 'flex'
+  setGreeting()
+  loadData()
+}
+
+function setGreeting() {
+  var h = new Date().getHours()
+  var greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+  document.getElementById('welcomeTitle').textContent = greet + ', Raul.'
+}
+
+// ── DATA ────────────────────────────────────────────────────────────────────────
+function setProgress(pct) {
+  document.getElementById('loadingBar').style.width = pct + '%'
+}
+
+async function loadData() {
+  setProgress(20)
+  try {
+    var res = await fetch(VERA_API)
+    setProgress(70)
+    if (!res.ok) throw new Error('API ' + res.status)
+    dashData = await res.json()
+    setProgress(100)
+    setTimeout(function(){ setProgress(0) }, 600)
+    applyData()
+  } catch(err) {
+    setProgress(0)
+    document.getElementById('statusDot').className = 'status-dot red'
+    document.getElementById('statusTxt').textContent = 'Offline — ' + err.message
+  }
+}
+
+function applyData() {
+  var s = dashData.stats || {}
+
+  // Status bar
+  document.getElementById('statusDot').className = 'status-dot'
+  document.getElementById('statusTxt').textContent = 'Live · ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+
+  // Badges
+  if (s.draftPostCount > 0) {
+    document.getElementById('draftBadge').textContent = s.draftPostCount
+    document.getElementById('draftBadge').style.display = 'inline'
+  }
+  if (s.pendingCount > 0) {
+    document.getElementById('propBadge').textContent = s.pendingCount
+    document.getElementById('propBadge').style.display = 'inline'
+  }
+
+  // Briefing
+  if (dashData.briefing) {
+    var txt = ''
+    if (dashData.briefing.html_content) {
+      var tmp = document.createElement('div')
+      tmp.innerHTML = dashData.briefing.html_content
+      txt = (tmp.textContent || '').substring(0,300) + '…'
+    } else {
+      txt = dashData.briefing.subject || ''
+    }
+    document.getElementById('briefingText').textContent = txt
+    document.getElementById('veraBriefing').style.display = 'block'
+    document.getElementById('welcomeSubtitle').textContent = 'Your businesses are running. Here\'s what I see.'
+  } else {
+    document.getElementById('welcomeSubtitle').textContent = 'Ready to help. Ask me anything or open a panel above.'
+  }
+
+  // Auto-open overview
+  openDrawer('overview')
+}
+
+// ── DRAWER ───────────────────────────────────────────────────────────────────────
+function openDrawer(type) {
+  currentDrawer = type
+  document.getElementById('split').classList.add('drawer-open')
+
+  // Nav highlight
+  document.querySelectorAll('.nav-pill').forEach(function(p){ p.classList.remove('active') })
+  var pill = document.getElementById('pill-' + type)
+  if (pill) pill.classList.add('active')
+
+  // Title
+  var titles = {overview:'📊 Overview', social:'📱 Social Media', proposals:'💡 VERA Proposals', guardian:'🛡️ Guardian Alerts'}
+  document.getElementById('drawerTitle').textContent = titles[type] || type
+
+  // Render
+  var body = document.getElementById('drawerBody')
+  if (type === 'overview')   body.innerHTML = buildOverview()
+  else if (type === 'social')     body.innerHTML = buildSocial()
+  else if (type === 'proposals')  body.innerHTML = buildProposals()
+  else if (type === 'guardian')   body.innerHTML = buildGuardian()
+}
+
+function closeDrawer() {
+  document.getElementById('split').classList.remove('drawer-open')
+  currentDrawer = null
+  document.querySelectorAll('.nav-pill').forEach(function(p){ p.classList.remove('active') })
+}
+
+// ── OVERVIEW ─────────────────────────────────────────────────────────────────────
+function buildOverview() {
+  if (!dashData) return '<div class="alert alert-info">Loading…</div>'
+  var s = dashData.stats || {}
+  var html = '<div class="stats-grid">'
+  html += sc('🗂️', s.rfqCount||0,       'Total RFQs',          'gold')
+  html += sc('👤', s.clientCount||0,     'Clients',             '')
+  html += sc('🏭', s.supplierCount||0,   'Active Suppliers',    'green')
+  html += sc('⚠️', s.gapCount||0,        'Supplier Gaps',       s.gapCount>0?'red':'')
+  html += sc('💡', s.pendingCount||0,    'Pending Proposals',   s.pendingCount>0?'gold':'')
+  html += sc('🛡️', s.guardianCount||0,   'Guardian Alerts',     s.guardianCount>0?'red':'green')
+  html += sc('📝', s.draftPostCount||0,  'Draft Posts',         s.draftPostCount>0?'gold':'')
+  html += sc('✅', s.approvedPostCount||0,'Approved Posts',     'green')
+  html += '</div>'
+
+  if (dashData.rfqs && dashData.rfqs.length) {
+    html += '<div class="section-hdr"><h3>Recent RFQs</h3><span>' + (s.rfqCount||0) + ' total</span></div>'
+    html += '<table class="mini-table"><thead><tr><th>Reference</th><th>Date</th></tr></thead><tbody>'
+    dashData.rfqs.forEach(function(r) {
+      html += '<tr><td>' + esc(r.reference_number||'—') + '</td><td>' + fmtDate(r.created_at) + '</td></tr>'
+    })
+    html += '</tbody></table>'
+  }
+
+  html += '<div style="margin-top:16px">'
+  html += '<div class="section-hdr"><h3>Quick Actions</h3></div>'
+  html += '<div style="display:flex;flex-direction:column;gap:8px">'
+  html += qaBtn('🌍 Nice Kerr performance check', 'How is Nice Kerr performing in Gambia? Any updates on our first container sales and what should we ship next?')
+  html += qaBtn('📦 Container status update', 'What is the current status of our consolidation containers to Chile, Peru, and Mexico? Any issues?')
+  html += qaBtn('🚀 Growth opportunity scan', 'Scan our current operations and tell me the top 3 growth opportunities we should act on this week across all companies.')
+  html += qaBtn('🤖 Automation opportunities', 'What repetitive operational tasks could we automate this week to save time for sales?')
+  html += '</div></div>'
+  return html
+}
+
+function sc(icon, val, lbl, cls) {
+  return '<div class="stat-card ' + cls + '"><div class="sc-icon">' + icon + '</div><div class="sc-val">' + val + '</div><div class="sc-lbl">' + lbl + '</div></div>'
+}
+
+function qaBtn(label, msg) {
+  return '<button class="quick-pill" style="text-align:left;border-radius:8px;white-space:normal;line-height:1.4" onclick="askVeraCtx(' + JSON.stringify(msg) + ')">' + label + '</button>'
+}
+
+// ── SOCIAL ────────────────────────────────────────────────────────────────────────
+function buildSocial() {
+  if (!dashData || !dashData.socialPosts || !dashData.socialPosts.length) {
+    return '<div class="alert alert-info">ℹ️ No social posts found.</div>'
+  }
+  var posts = dashData.socialPosts
+  var html = '<div class="plat-filter">'
+  ;['all','instagram','tiktok','facebook','linkedin'].forEach(function(p) {
+    var lbl = {all:'All',instagram:'📷 Instagram',tiktok:'🎵 TikTok',facebook:'👥 Facebook',linkedin:'💼 LinkedIn'}[p]
+    html += '<button class="plat-btn' + (activeFilter===p?' active':'') + '" onclick="filterPosts(\'' + p + '\')">' + lbl + '</button>'
+  })
+  html += '</div>'
+
+  var filtered = activeFilter === 'all' ? posts : posts.filter(function(p){ return (p.platform||'').toLowerCase() === activeFilter })
+  if (!filtered.length) return html + '<div class="alert alert-info">No ' + activeFilter + ' posts.</div>'
+
+  filtered.forEach(function(p) { html += buildMockup(p) })
+  return html
+}
+
+function filterPosts(plat) {
+  activeFilter = plat
+  if (currentDrawer === 'social') document.getElementById('drawerBody').innerHTML = buildSocial()
+}
+
+// ── MOCKUP BUILDER ────────────────────────────────────────────────────────────────
+function buildMockup(p) {
+  var plat = (p.platform || 'instagram').toLowerCase()
+  if (plat === 'tiktok')   return buildTT(p)
+  if (plat === 'facebook') return buildFB(p)
+  if (plat === 'linkedin') return buildLI(p)
+  return buildIG(p)
+}
+
+function getBg(p) {
+  var plat = (p.platform||'').toLowerCase()
+  if (plat === 'tiktok')   return 'linear-gradient(180deg,#060606 0%,#1a0010 50%,#0a001a 100%)'
+  if (plat === 'linkedin') return 'linear-gradient(135deg,#0a1628 0%,#0d2137 60%,#C9A227 100%)'
+  return 'linear-gradient(135deg,#141416 0%,#1f1f24 50%,#C9A227 100%)'
+}
+
+function getAccount(p) {
+  return {name:'OWM Parts', handle:'@owmparts', initials:'OW', color:'linear-gradient(135deg,#8a6200,#C9A227)'}
+}
+
+function cleanBrief(s) {
+  if (!s) return 'Visual content coming soon'
+  return s.replace(/==[\s\S]*?==/g,'').replace(/\n{3,}/g,'\n').trim().substring(0,140)
+}
+function cleanCap(s) {
+  if (!s) return ''
+  return s.replace(/==[\s\S]*?==/g,'').trim().substring(0,200)
+}
+function cleanTags(t) {
+  if (!t) return ''
+  if (Array.isArray(t)) return t.slice(0,6).join(' ')
+  return String(t).substring(0,120)
+}
+
+function statusPill(status, dark) {
+  if (dark) {
+    if (status==='approved') return '<span class="post-status-pill psp-dark-approved">✓ Approved</span>'
+    if (status==='rejected') return '<span class="post-status-pill psp-dark-rejected">✗ Rejected</span>'
+    return '<span class="post-status-pill psp-dark-draft">● Draft</span>'
+  }
+  if (status==='approved') return '<span class="post-status-pill psp-approved">✓ Approved</span>'
+  if (status==='rejected') return '<span class="post-status-pill psp-rejected">✗ Rejected</span>'
+  return '<span class="post-status-pill psp-draft">● Draft</span>'
+}
+
+function actionBtns(p) {
+  var id = esc(p.id)
+  var btns = ''
+  if (p.status === 'draft') {
+    btns += '<button class="pa-btn pa-approve" onclick="approvePost(\'' + id + '\')">✓</button>'
+    btns += '<button class="pa-btn pa-reject" onclick="rejectPost(\'' + id + '\')">✗</button>'
+  }
+  btns += '<button class="pa-btn pa-vera" onclick="askVeraPost(\'' + id + '\')">VERA</button>'
+  return '<div class="post-action-btns">' + btns + '</div>'
+}
+
+function buildIG(p) {
+  var acc = getAccount(p)
+  var bg = getBg(p)
+  return '<div class="ig-card">' +
+    '<div class="ig-header">' +
+      '<div class="ig-avatar" style="background:' + acc.color + '">' + acc.initials + '</div>' +
+      '<div class="ig-handle"><span class="ih-name">' + esc(acc.name) + '</span><span class="ih-sub">' + esc(acc.handle) + '</span></div>' +
+      '<span style="margin-left:auto;font-size:20px;cursor:pointer">⋯</span>' +
+    '</div>' +
+    '<div class="ig-image">' +
+      '<div class="ig-image-overlay" style="background:' + bg + ';width:100%;height:100%"></div>' +
+      '<div class="ig-image-txt">' + esc(cleanBrief(p.image_brief)) + '</div>' +
+    '</div>' +
+    '<div class="ig-actions"><span>🤍</span><span>💬</span><span>📤</span><span class="ig-bookmark">🔖</span></div>' +
+    '<div class="ig-caption-area">' +
+      (cleanCap(p.caption) ? '<div class="ig-caption"><strong>' + esc(acc.name) + '</strong> ' + esc(cleanCap(p.caption)) + '</div>' : '') +
+      (cleanTags(p.hashtags) ? '<div class="ig-hashtags">' + esc(cleanTags(p.hashtags)) + '</div>' : '') +
+    '</div>' +
+    '<div class="ig-footer">' + statusPill(p.status, false) + actionBtns(p) + '</div>' +
+  '</div>'
+}
+
+function buildTT(p) {
+  var acc = getAccount(p)
+  var bg = getBg(p)
+  return '<div class="tt-card">' +
+    '<div class="tt-header">' +
+      '<div class="tt-avatar" style="background:' + acc.color + '">' + acc.initials + '</div>' +
+      '<div class="tt-username">' + esc(acc.name) + '<span>' + esc(acc.handle) + '</span></div>' +
+    '</div>' +
+    '<div class="tt-video">' +
+      '<div class="tt-video-bg" style="background:' + bg + ';width:100%;height:100%"></div>' +
+      '<div class="tt-play-btn">▶</div>' +
+      '<div class="tt-side-actions"><span>❤️</span><span>💬</span><span>↗️</span><span>🎵</span></div>' +
+      '<div class="tt-brief-overlay"><p>' + esc(cleanBrief(p.image_brief)) + '</p></div>' +
+    '</div>' +
+    '<div class="tt-bottom">' +
+      (cleanCap(p.caption) ? '<div class="tt-caption">' + esc(cleanCap(p.caption)) + '</div>' : '') +
+      (cleanTags(p.hashtags) ? '<div class="tt-hashtags">' + esc(cleanTags(p.hashtags)) + '</div>' : '') +
+      '<div class="tt-footer">' + statusPill(p.status, true) + actionBtns(p) + '</div>' +
+    '</div>' +
+  '</div>'
+}
+
+function buildFB(p) {
+  var acc = getAccount(p)
+  var bg = getBg(p)
+  return '<div class="fb-card">' +
+    '<div class="fb-header">' +
+      '<div class="fb-avatar" style="background:' + acc.color + '">' + acc.initials + '</div>' +
+      '<div><span class="fb-name">' + esc(acc.name) + '</span><span class="fb-meta">' + esc(acc.handle) + ' · Just now · 🌐</span></div>' +
+    '</div>' +
+    (cleanCap(p.caption) ? '<div class="fb-text">' + esc(cleanCap(p.caption)) + '</div>' : '') +
+    '<div class="fb-image">' +
+      '<div class="fb-image-bg" style="background:' + bg + ';width:100%;height:100%"></div>' +
+      '<div class="fb-image-txt">' + esc(cleanBrief(p.image_brief)) + '</div>' +
+    '</div>' +
+    '<div class="fb-react-bar">' +
+      '<div class="fb-react-btn">👍 Like</div>' +
+      '<div class="fb-react-btn">💬 Comment</div>' +
+      '<div class="fb-react-btn">↗️ Share</div>' +
+    '</div>' +
+    '<div class="fb-footer">' + statusPill(p.status, true) + actionBtns(p) + '</div>' +
+  '</div>'
+}
+
+function buildLI(p) {
+  var acc = getAccount(p)
+  var bg = getBg(p)
+  return '<div class="li-card">' +
+    '<div class="li-header">' +
+      '<div class="li-avatar" style="background:' + acc.color + '">' + acc.initials + '</div>' +
+      '<div class="li-name-block">' +
+        '<span class="li-name">' + esc(acc.name) + '</span>' +
+        '<span class="li-title">Trading & Export · China</span>' +
+        '<span class="li-date-txt">Just now · 🌐</span>' +
+      '</div>' +
+      '<button class="li-follow-btn">+ Follow</button>' +
+    '</div>' +
+    (cleanCap(p.caption) ? '<div class="li-body">' + esc(cleanCap(p.caption)) + '</div>' : '') +
+    '<div class="li-image">' +
+      '<div class="li-image-bg" style="background:' + bg + ';width:100%;height:100%"></div>' +
+      '<div class="li-image-txt">' + esc(cleanBrief(p.image_brief)) + '</div>' +
+    '</div>' +
+    '<div class="li-react-bar">' +
+      '<div class="li-react-btn">👍 Like</div>' +
+      '<div class="li-react-btn">💬 Comment</div>' +
+      '<div class="li-react-btn">↣ Share</div>' +
+      '<div class="li-react-btn">📤 Send</div>' +
+    '</div>' +
+    '<div class="li-footer">' + statusPill(p.status, true) + actionBtns(p) + '</div>' +
+  '</div>'
+}
+
+// ── PROPOSALS ─────────────────────────────────────────────────────────────────────
+function buildProposals() {
+  if (!dashData || !dashData.proposals || !dashData.proposals.length) {
+    return '<div class="alert alert-ok">✓ No pending proposals.</div>'
+  }
+  var html = ''
+  dashData.proposals.forEach(function(p) {
+    var tagCls = {upsell:'upsell',risk:'risk',outreach:'outreach',content:'content'}[p.proposal_type] || 'outreach'
+    var val = p.estimated_value_usd ? '$' + Number(p.estimated_value_usd).toLocaleString() + ' est.' : ''
+    var conf = p.confidence_pct ? Math.round(p.confidence_pct) + '% confidence' : ''
+    html += '<div class="proposal-card">' +
+      '<div class="prop-tag ' + tagCls + '">' + esc(p.proposal_type||'proposal').toUpperCase() + '</div>' +
+      '<h4>' + esc(p.title||'Untitled') + '</h4>' +
+      '<p>' + esc(p.description||p.reasoning||'') + '</p>' +
+      '<div class="prop-meta">' +
+        (val ? '<span>' + val + '</span>' : '') +
+        (conf ? '<span><strong>' + conf + '</strong></span>' : '') +
+        (p.action_required ? '<span>Action: <strong>' + esc(p.action_required) + '</strong></span>' : '') +
+      '</div>' +
+      '<div class="prop-actions">' +
+        '<button class="btn-approve" onclick="propDecision(\'' + esc(p.id) + '\',\'approve\')">✓ Approve</button>' +
+        '<button class="btn-decline" onclick="propDecision(\'' + esc(p.id) + '\',\'decline\')">✗ Decline</button>' +
+        '<button class="btn-vera" onclick="askVeraCtx(\'Tell me more about this VERA proposal: ' + esc(p.title||'') + '\')">💬 Ask VERA</button>' +
+      '</div>' +
+    '</div>'
+  })
+  return html
+}
+
+// ── GUARDIAN ──────────────────────────────────────────────────────────────────────
+function buildGuardian() {
+  if (!dashData || !dashData.guardian || !dashData.guardian.length) {
+    return '<div class="alert alert-ok">✓ No critical Guardian alerts.</div>'
+  }
+  var html = '<div class="alert alert-warn">⚠️ ' + dashData.guardian.length + ' high/critical finding(s) need your attention.</div>'
+  dashData.guardian.forEach(function(g) {
+    var sev = (g.severity||'high').toLowerCase()
+    html += '<div class="guardian-card">' +
+      '<div class="guardian-sev ' + sev + '"></div>' +
+      '<div class="guardian-body">' +
+        '<div class="guardian-badge ' + sev + '">' + sev.toUpperCase() + '</div>' +
+        '<h4>' + esc(g.finding_type||'Finding') + '</h4>' +
+        '<p>' + esc(g.description||'') + '</p>' +
+      '</div>' +
+    '</div>'
+  })
+  html += '<div style="margin-top:14px">'
+  html += '<button class="quick-pill" style="width:100%;border-radius:8px" onclick="askVeraCtx(\'Review all current Guardian alerts and tell me exactly what I need to do right now, in priority order.\')">🛡️ Ask VERA to analyze all alerts</button>'
+  html += '</div>'
+  return html
+}
+
+// ── POST ACTIONS ─────────────────────────────────────────────────────────────────
+async function approvePost(id) {
+  try {
+    await fetch(VERA_API, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'approve_post', post_id:id})
+    })
+    if (dashData && dashData.socialPosts) {
+      dashData.socialPosts.forEach(function(p){ if (p.id===id){ p.status='approved'; p.approved_by='Raul' } })
+    }
+    if (currentDrawer==='social') document.getElementById('drawerBody').innerHTML = buildSocial()
+    addMsg('msg-s','✓ Post approved')
+  } catch(e) { addMsg('msg-s','Error: '+e.message) }
+}
+
+async function rejectPost(id) {
+  var note = prompt('Reason for rejection (optional):') || ''
+  try {
+    await fetch(VERA_API, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'reject_post', post_id:id, note:note})
+    })
+    if (dashData && dashData.socialPosts) {
+      dashData.socialPosts.forEach(function(p){ if (p.id===id) p.status='rejected' })
+    }
+    if (currentDrawer==='social') document.getElementById('drawerBody').innerHTML = buildSocial()
+    addMsg('msg-s','✗ Post rejected')
+  } catch(e) { addMsg('msg-s','Error: '+e.message) }
+}
+
+async function propDecision(id, decision) {
+  try {
+    await fetch(VERA_API, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'proposal-decision', id:id, decision:decision})
+    })
+    if (dashData && dashData.proposals) {
+      dashData.proposals = dashData.proposals.filter(function(p){ return p.id!==id })
+    }
+    if (currentDrawer==='proposals') document.getElementById('drawerBody').innerHTML = buildProposals()
+    addMsg('msg-s', decision==='approve' ? '✓ Proposal approved' : '✗ Proposal declined')
+  } catch(e) { addMsg('msg-s','Error: '+e.message) }
+}
+
+function askVeraPost(id) {
+  var post = dashData && dashData.socialPosts && dashData.socialPosts.find(function(p){ return p.id===id })
+  if (!post) return
+  var msg = 'Review this ' + (post.platform||'social') + ' post for OWM Parts. Caption: "' + cleanCap(post.caption) + '". Image brief: "' + cleanBrief(post.image_brief) + '". Should we approve it? Any improvements?'
+  askVeraCtx(msg)
+}
+
+// ── VERA CHAT ─────────────────────────────────────────────────────────────────────
+function setMode(m) {
+  veraMode = m
+  document.getElementById('mode-ops').classList.toggle('active', m==='ops')
+  document.getElementById('mode-mkt').classList.toggle('active', m==='marketing')
+}
+
+function hideWelcome() {
+  var w = document.getElementById('veraWelcome')
+  if (w) w.style.display = 'none'
+}
+
+function quickAsk(msg) {
+  hideWelcome()
+  closeDrawer()
+  addMsg('msg-u', msg)
+  sendToVera(msg)
+}
+
+function askVeraCtx(msg) {
+  hideWelcome()
+  closeDrawer()
+  addMsg('msg-s','📎 Loaded context from ' + (currentDrawer||'dashboard'))
+  addMsg('msg-u', msg)
+  sendToVera(msg)
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg() }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+}
+
+function sendMsg() {
+  var inp = document.getElementById('veraInput')
+  var txt = inp.value.trim()
+  if (!txt || isLoading) return
+  inp.value = ''
+  inp.style.height = 'auto'
+  hideWelcome()
+  addMsg('msg-u', txt)
+  sendToVera(txt)
+}
+
+function addMsg(cls, text) {
+  var msgs = document.getElementById('veraMessages')
+  var div = document.createElement('div')
+  div.className = cls
+  if (cls === 'msg-v') div.innerHTML = text
+  else div.textContent = text
+  msgs.appendChild(div)
+  msgs.scrollTop = msgs.scrollHeight
+  return div
+}
+
+async function sendToVera(msg) {
+  isLoading = true
+  document.getElementById('sendBtn').disabled = true
+
+  var ctx = 'You are VERA, the AI business partner for Raul Nunez. '
+  if (dashData) {
+    var s = dashData.stats || {}
+    ctx += 'Companies: OWM Parts (aftermarket auto parts supplier, Mexico/LATAM). Copimex Group China (trading/export, consolidation warehouses in Foshan, Ningbo, Yiwu — ships to Chile, Peru, Mexico). Nice Kerr (construction materials JV in Gambia, Africa — 50% partners, first container landed June 2026). '
+    ctx += 'Current metrics: ' + s.rfqCount + ' RFQs, ' + s.clientCount + ' clients, ' + s.supplierCount + ' suppliers, ' + s.pendingCount + ' pending proposals, ' + s.gapCount + ' supplier gaps. '
+    if (veraMode === 'marketing') ctx += 'Mode: Marketing — focus on social media, content, brand strategy. '
+  }
+
+  var thinkEl = document.createElement('div')
+  thinkEl.className = 'msg-v'
+  thinkEl.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>'
+  var msgs = document.getElementById('veraMessages')
+  msgs.appendChild(thinkEl)
+  msgs.scrollTop = msgs.scrollHeight
+
+  try {
+    var controller = new AbortController()
+    var timer = setTimeout(function(){ controller.abort() }, 45000)
+
+    var res = await fetch(VERA_CHAT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey': ANON_KEY},
+      body: JSON.stringify({message:msg, context:ctx, mode:veraMode, company:'owm-parts'}),
+      signal: controller.signal
+    })
+    clearTimeout(timer)
+
+    var rawText = await res.text()
+    var data = {}
+    try { data = JSON.parse(rawText) } catch(e) { data = { reply: rawText } }
+
+    thinkEl.remove()
+
+    if (!res.ok) {
+      var errMsg = data.error || data.message || 'HTTP ' + res.status
+      addMsg('msg-v','⚠️ VERA error (' + res.status + '): ' + errMsg)
+    } else {
+      var reply = data.reply || data.message || data.response || data.text || ''
+      if (!reply) reply = 'VERA responded but sent no text. Raw: ' + JSON.stringify(data)
+      addMsg('msg-v', fmtReply(reply))
+      speakVera(reply, true)  // true = start listening after she finishes speaking
+    }
+  } catch(err) {
+    thinkEl.remove()
+    var errTxt = err.name === 'AbortError' ? 'Request timed out (45s). Try again.' : err.message
+    addMsg('msg-v','⚠️ Could not reach VERA: ' + errTxt)
+  }
+
+  isLoading = false
+  document.getElementById('sendBtn').disabled = false
+}
+
+function fmtReply(t) {
+  return t
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/^#{1,3} (.+)$/gm,'<strong style="color:var(--gold);display:block;margin:8px 0 4px">$1</strong>')
+    .replace(/^[-•] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]+?<\/li>)/g,'<ul style="margin-left:16px;margin-top:4px">$1</ul>')
+    .replace(/\n\n/g,'<br><br>')
+    .replace(/\n/g,'<br>')
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────────
+function esc(s) {
+  if (s===null||s===undefined) return ''
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
+function fmtDate(d) {
+  if (!d) return '—'
+  try { return new Date(d).toLocaleDateString([],{month:'short',day:'numeric'}) } catch(e){ return d }
+}
+</script>
+</body>
+</html>
