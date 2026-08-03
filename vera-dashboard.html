@@ -6,7 +6,7 @@
 <title>VERA · OWM Command Center</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{
+:root{h
   --bg:#0a0a0b;
   --bg2:#111113;
   --bg3:#18181c;
@@ -799,7 +799,7 @@ function setProgress(pct) {
 async function loadData() {
   setProgress(20)
   try {
-    var res = await fetch(VERA_API)
+    var res = await fetch(VERA_API, { headers: { 'apikey': ANON_KEY } })
     setProgress(70)
     if (!res.ok) throw new Error('API ' + res.status)
     dashData = await res.json()
