@@ -6,7 +6,7 @@
 <title>VERA · OWM Command Center</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{h
+:root{
   --bg:#0a0a0b;
   --bg2:#111113;
   --bg3:#18181c;
@@ -610,6 +610,7 @@ var dashData    = null
 var activeFilter = 'all'
 var isLoading   = false
 var currentDrawer = null
+var veraSessionId = 'vera-' + Date.now() + '-' + Math.random().toString(36).slice(2,8)
 
 // ── VOICE ────────────────────────────────────────────────────────────────────────
 var voiceEnabled = false  // OFF until user clicks Voice button (Chrome needs a user gesture first)
@@ -1153,7 +1154,7 @@ function buildGuardian() {
 async function approvePost(id) {
   try {
     await fetch(VERA_API, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','apikey': ANON_KEY},
       body: JSON.stringify({action:'approve_post', post_id:id})
     })
     if (dashData && dashData.socialPosts) {
@@ -1168,7 +1169,7 @@ async function rejectPost(id) {
   var note = prompt('Reason for rejection (optional):') || ''
   try {
     await fetch(VERA_API, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','apikey': ANON_KEY},
       body: JSON.stringify({action:'reject_post', post_id:id, note:note})
     })
     if (dashData && dashData.socialPosts) {
@@ -1182,7 +1183,7 @@ async function rejectPost(id) {
 async function propDecision(id, decision) {
   try {
     await fetch(VERA_API, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','apikey': ANON_KEY},
       body: JSON.stringify({action:'proposal-decision', id:id, decision:decision})
     })
     if (dashData && dashData.proposals) {
@@ -1284,7 +1285,7 @@ async function sendToVera(msg) {
     var res = await fetch(VERA_CHAT, {
       method:'POST',
       headers:{'Content-Type':'application/json','apikey': ANON_KEY},
-      body: JSON.stringify({message:msg, context:ctx, mode:veraMode, company:'owm-parts'}),
+      body: JSON.stringify({message:msg, context:ctx, mode:veraMode, company:'owm-parts', session_id: veraSessionId}),
       signal: controller.signal
     })
     clearTimeout(timer)
